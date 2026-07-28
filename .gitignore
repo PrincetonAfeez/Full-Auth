@@ -1,0 +1,13 @@
+.env
+.env.production
+.env.staging
+.env.local
+.venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+staticfiles/
+.pytest_cache/
+
+
+audit_framework_saas.md
