@@ -1,0 +1,11 @@
+{% extends "web/base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Your backup codes</h1>
+  <p><strong>Save these now.</strong> Each code works once and they will not be shown again.</p>
+  <ul>
+    {% for code in codes %}<li><code>{{ code }}</code></li>{% endfor %}
+  </ul>
+  <a class="button" href="{% url 'web:dashboard' %}">I have saved these</a>
+</section>
+{% endblock %}

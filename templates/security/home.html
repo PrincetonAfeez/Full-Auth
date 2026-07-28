@@ -1,0 +1,69 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block content %}
+<section class="panel">
+  <h1>Security</h1>
+  <p>
+    <a class="button" href="{% url 'web:change_password' %}">Change password</a>
+    <a class="button" href="{% url 'web:change_email' %}">Change email</a>
+    <form method="post" action="{% url 'web:regenerate_backup_codes' %}" style="display:inline;background:transparent;border:0;padding:0">
+      {% csrf_token %}<button type="submit">Regenerate backup codes</button>
+    </form>
+    <button type="button" id="passkey-register">Add passkey</button>
+    <a class="button" href="{% url 'web:notification_preferences' %}">Notifications</a>
+  </p>
+  <p id="passkey-status" aria-live="polite"></p>
+  <script src="{% static 'js/webauthn.js' %}"></script>
+
+  <h2>Active sessions</h2>
+  <table>
+    <thead><tr><th>Seen</th><th>Idle expiry</th><th>Absolute expiry</th><th>Revoked</th><th></th></tr></thead>
+    <tbody>
+      {% for session in active_sessions %}
+        <tr>
+          <td>{{ session.last_seen_at }}</td>
+          <td>{{ session.expires_idle_at }}</td>
+          <td>{{ session.expires_absolute_at }}</td>
+          <td>{{ session.revoked_at|yesno:"yes,no" }}</td>
+          <td>
+            {% if not session.revoked_at %}
+              <form method="post" action="{% url 'web:revoke_session' session.id %}" style="background:transparent;border:0;padding:0;margin:0">
+                {% csrf_token %}<button type="submit">Revoke</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No sessions recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Factors</h2>
+  <p>
+    <a class="button" href="{% url 'web:enroll_totp' %}">Add authenticator (TOTP)</a>
+    <form method="post" action="{% url 'web:enroll_email_otp' %}" style="display:inline;background:transparent;border:0;padding:0">
+      {% csrf_token %}<button type="submit">Enable email OTP</button>
+    </form>
+  </p>
+  <table>
+    <thead><tr><th>Name</th><th>Type</th><th>Enabled</th><th></th></tr></thead>
+    <tbody>
+      {% for factor in factors %}
+        <tr>
+          <td>{{ factor.name }}</td><td>{{ factor.type }}</td><td>{{ factor.enabled|yesno:"yes,no" }}</td>
+          <td>
+            {% if factor.enabled %}
+              <form method="post" action="{% url 'web:disable_factor' factor.id %}" style="background:transparent;border:0;padding:0;margin:0">
+                {% csrf_token %}<button type="submit">Disable</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">No factors enrolled.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

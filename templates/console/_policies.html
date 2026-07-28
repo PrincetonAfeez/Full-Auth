@@ -1,0 +1,16 @@
+<section class="panel">
+  <h1>Security policies</h1>
+  <table>
+    <thead><tr><th>Scope</th><th>Idle</th><th>Absolute</th><th>2FA admins</th><th>Lockout</th><th>Version</th></tr></thead>
+    <tbody>
+      {% for p in policies %}
+        <tr>
+          <td>{{ p.organization.slug|default:"(global)" }}</td>
+          <td>{{ p.idle_timeout_minutes }}m</td><td>{{ p.absolute_timeout_hours }}h</td>
+          <td>{{ p.require_2fa_for_admins|yesno:"yes,no" }}</td><td>{{ p.lockout_threshold }}</td>
+          <td>{{ p.policy_version }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6">No policies.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

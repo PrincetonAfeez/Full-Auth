@@ -1,0 +1,10 @@
+{% extends "web/base.html" %}
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  <h1>Accept invitation</h1>
+  <p>Accept this organization invitation for your account?</p>
+  <input type="hidden" name="token" value="{{ token }}">
+  <button type="submit">Accept</button>
+</form>
+{% endblock %}

@@ -1,0 +1,14 @@
+<section class="panel">
+  <h1>Notification delivery log</h1>
+  <table>
+    <thead><tr><th>When</th><th>Recipient</th><th>Template</th><th>Channel</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for d in deliveries %}
+        <tr>
+          <td>{{ d.created_at }}</td><td>{{ d.recipient.username|default:"-" }}</td>
+          <td>{{ d.template }}</td><td>{{ d.channel }}</td><td>{{ d.status }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5">No deliveries.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

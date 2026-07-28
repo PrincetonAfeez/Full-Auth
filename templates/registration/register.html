@@ -1,0 +1,19 @@
+{% extends "web/base.html" %}
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  <h1>Register</h1>
+  <label for="username">Username</label>
+  <input id="username" name="username" autocomplete="username" required>
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="email" required>
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" autocomplete="new-password" required>
+  <label>
+    <input type="checkbox" name="accept_terms" value="1" required>
+    I agree to the <a href="{% url 'web:terms' %}">Terms of Service</a> and
+    <a href="{% url 'web:privacy' %}">Privacy Policy</a>.
+  </label>
+  <button type="submit">Create account</button>
+</form>
+{% endblock %}

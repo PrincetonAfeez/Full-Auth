@@ -1,0 +1,17 @@
+<section class="panel">
+  <h1>Active sessions</h1>
+  <table>
+    <thead><tr><th>User</th><th>Seen</th><th>IP</th><th>Revoked</th><th></th></tr></thead>
+    <tbody>
+      {% for s in sessions %}
+        <tr>
+          <td>{{ s.user.username }}</td><td>{{ s.last_seen_at }}</td><td>{{ s.ip_address|default:"-" }}</td>
+          <td>{{ s.revoked_at|yesno:"yes,no" }}</td>
+          <td>{% if not s.revoked_at %}
+            <button hx-post="{% url 'web:console_session_revoke' s.id %}" hx-target="#console-main">Revoke</button>
+          {% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5">No sessions.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

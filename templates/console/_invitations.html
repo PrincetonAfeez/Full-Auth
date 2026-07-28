@@ -1,0 +1,15 @@
+<section class="panel">
+  <h1>Invitations</h1>
+  <table>
+    <thead><tr><th>Org</th><th>Email</th><th>Role</th><th>Inviter</th><th>Accepted</th><th>Revoked</th></tr></thead>
+    <tbody>
+      {% for i in invitations %}
+        <tr>
+          <td>{{ i.organization.slug }}</td><td>{{ i.email }}</td><td>{{ i.intended_role }}</td>
+          <td>{{ i.inviter.username|default:"-" }}</td>
+          <td>{{ i.accepted_at|yesno:"yes,no" }}</td><td>{{ i.revoked_at|yesno:"yes,no" }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6">No invitations.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

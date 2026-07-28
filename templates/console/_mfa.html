@@ -1,0 +1,11 @@
+<section class="panel">
+  <h1>MFA devices</h1>
+  <table>
+    <thead><tr><th>User</th><th>Type</th><th>Name</th><th>Enabled</th></tr></thead>
+    <tbody>
+      {% for d in devices %}
+        <tr><td>{{ d.user.username }}</td><td>{{ d.type }}</td><td>{{ d.name }}</td><td>{{ d.enabled|yesno:"yes,no" }}</td></tr>
+      {% empty %}<tr><td colspan="4">No devices.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

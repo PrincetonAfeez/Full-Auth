@@ -1,0 +1,19 @@
+{% extends "web/base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>{{ title }}</h1>
+  {% if doc == "terms" %}
+    <p>These Terms of Service govern your use of the Full Auth platform. By creating an account
+       you agree to use the service lawfully and to keep your credentials secure.</p>
+    <p>The service is provided on an as-available basis. See the Privacy Policy for how your data
+       is handled.</p>
+  {% else %}
+    <p>This Privacy Policy describes what data Full Auth collects and how it is used. We store
+       your account identifiers, authentication factors (secrets encrypted at rest), session and
+       device metadata, and a security audit trail.</p>
+    <p>Passwords are checked against the HaveIBeenPwned k-anonymity range API (only a partial
+       hash prefix leaves the server). You may export or request erasure of your account data.</p>
+  {% endif %}
+  <p><em>Operators must replace this template with counsel-reviewed legal text before serving production customers.</em></p>
+</section>
+{% endblock %}

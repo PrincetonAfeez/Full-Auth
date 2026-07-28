@@ -1,0 +1,25 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block content %}
+<script src="{% static 'js/htmx.min.js' %}"></script>
+<div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' style="display:flex;gap:20px;align-items:flex-start">
+  <nav class="panel" style="min-width:170px" hx-target="#console-main">
+    <strong>Security console</strong>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+      <a class="button" hx-get="{% url 'web:console' %}">Overview</a>
+      <a class="button" hx-get="{% url 'web:console_users' %}">Users</a>
+      <a class="button" hx-get="{% url 'web:console_orgs' %}">Organizations</a>
+      <a class="button" hx-get="{% url 'web:console_invitations' %}">Invitations</a>
+      <a class="button" hx-get="{% url 'web:console_sessions' %}">Sessions</a>
+      <a class="button" hx-get="{% url 'web:console_mfa' %}">MFA devices</a>
+      <a class="button" hx-get="{% url 'web:console_policies' %}">Policies</a>
+      <a class="button" hx-get="{% url 'web:console_risk' %}">Risk events</a>
+      <a class="button" hx-get="{% url 'web:console_audit' %}">Audit log</a>
+      <a class="button" hx-get="{% url 'web:console_notifications' %}">Notifications</a>
+    </div>
+  </nav>
+  <div id="console-main" style="flex:1">
+    {% include partial %}
+  </div>
+</div>
+{% endblock %}

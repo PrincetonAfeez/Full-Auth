@@ -1,0 +1,8 @@
+{% extends "web/base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Dashboard</h1>
+  <p>Signed in as {{ request.user.username }}.</p>
+  <p>Email verified: {{ request.user.email_verified|yesno:"yes,no" }}</p>
+</section>
+{% endblock %}

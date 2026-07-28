@@ -1,0 +1,24 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block content %}
+<form method="post" id="step-up-form">
+  {% csrf_token %}
+  <h1>Confirm it's you</h1>
+  <p>This action ({{ action }}) requires recent authentication.</p>
+  <input type="hidden" name="action" value="{{ action }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  <input type="hidden" name="token" value="{{ token }}">
+  {% if request.user.has_usable_password %}
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password">
+  {% endif %}
+  <label for="totp_code">Authenticator code (optional)</label>
+  <input id="totp_code" name="totp_code" inputmode="numeric" autocomplete="one-time-code">
+  <label for="backup_code">Backup code (optional)</label>
+  <input id="backup_code" name="backup_code" autocomplete="off">
+  <button type="submit">Confirm</button>
+</form>
+<p id="passkey-status" aria-live="polite"></p>
+<button type="button" id="passkey-step-up" data-action="{{ action }}">Use passkey instead</button>
+<script src="{% static 'js/webauthn.js' %}"></script>
+{% endblock %}

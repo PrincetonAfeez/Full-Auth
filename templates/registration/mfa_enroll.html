@@ -1,0 +1,30 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block content %}
+<section class="panel">
+  <h1>Set up your second factor</h1>
+  {% if stage == "confirm" %}
+    <p>Add this secret to your authenticator app, then enter the current 6-digit code to finish.</p>
+    <p><code style="font-size:1.1em">{{ secret }}</code></p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="stage" value="confirm">
+      <label for="code">Authenticator code</label>
+      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+      <button type="submit">Confirm and finish</button>
+    </form>
+  {% else %}
+    <p>A strong second factor is required for this account. Choose TOTP or register a passkey.</p>
+    <form method="post" style="margin-bottom:1rem">
+      {% csrf_token %}
+      <input type="hidden" name="stage" value="start">
+      <button type="submit">Set up authenticator app (TOTP)</button>
+    </form>
+    {% if passkey_enroll %}
+      <p id="passkey-status" aria-live="polite"></p>
+      <button type="button" id="passkey-enroll-auth">Register a passkey instead</button>
+    {% endif %}
+    <script src="{% static 'js/webauthn.js' %}" defer></script>
+  {% endif %}
+</section>
+{% endblock %}

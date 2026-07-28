@@ -1,0 +1,20 @@
+<section class="panel">
+  <h1>Users</h1>
+  <input type="search" name="q" value="{{ q }}" placeholder="Search username"
+         hx-get="{% url 'web:console_users' %}" hx-target="#console-main" hx-trigger="keyup changed delay:300ms">
+  <table>
+    <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.email }}</td><td>{{ u.status }}</td>
+          <td>
+            {% if u.is_active %}
+              <button hx-post="{% url 'web:console_user_deactivate' u.id %}" hx-target="#console-main">Deactivate</button>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="5">No users.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

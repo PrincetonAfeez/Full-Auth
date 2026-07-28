@@ -1,0 +1,18 @@
+{% extends "web/base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Notification preferences</h1>
+  <p>Security-critical alerts (password changes, MFA removal, account deactivation, verification
+     and invitation links) are always sent and cannot be turned off.</p>
+  <form method="post">
+    {% csrf_token %}
+    {% for category, enabled in preferences.items %}
+      <label style="font-weight:400">
+        <input type="checkbox" name="{{ category }}" {% if enabled %}checked{% endif %} style="width:auto">
+        {{ category }}
+      </label>
+    {% endfor %}
+    <button type="submit">Save preferences</button>
+  </form>
+</section>
+{% endblock %}

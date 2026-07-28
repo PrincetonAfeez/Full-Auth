@@ -1,0 +1,22 @@
+<section class="panel">
+  <h1>Organizations</h1>
+  <table>
+    <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for o in orgs %}
+        <tr>
+          <td>{{ o.name }}</td><td>{{ o.slug }}</td><td>{{ o.status }}</td>
+          <td>
+            {% if o.status == "active" %}
+              <button hx-post="{% url 'web:console_org_action' o.slug %}" hx-vals='{"action":"suspend"}' hx-target="#console-main">Suspend</button>
+            {% else %}
+              <button hx-post="{% url 'web:console_org_action' o.slug %}" hx-vals='{"action":"reactivate"}' hx-target="#console-main">Reactivate</button>
+            {% endif %}
+            <button hx-post="{% url 'web:console_org_action' o.slug %}" hx-vals='{"action":"close"}' hx-target="#console-main"
+                    hx-confirm="Close this organization and remove all memberships?">Close</button>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="4">No organizations.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>

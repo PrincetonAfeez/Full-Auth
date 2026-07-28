@@ -1,0 +1,38 @@
+{% extends "web/base.html" %}
+{% load static %}
+{% block content %}
+<section class="panel">
+  <h1>Second factor</h1>
+  {% if "webauthn" in factors %}
+    <p>
+      <button type="button" id="passkey-authenticate">Use a passkey</button>
+      <span id="passkey-status" aria-live="polite"></span>
+    </p>
+    <script src="{% static 'js/webauthn.js' %}"></script>
+  {% endif %}
+  <p>Choose how to verify:</p>
+  <p>
+    {% for f in factors %}
+      <a class="button" href="?method={{ f }}" style="{% if f == method %}outline:2px solid #145c9e{% endif %}">{{ f }}</a>
+    {% endfor %}
+  </p>
+
+  {% if method == "email_otp" %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="method" value="email_otp_send">
+      <button type="submit">Email me a code</button>
+    </form>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="method" value="{{ method }}">
+    <label for="code">
+      {% if method == "totp" %}Authenticator code{% elif method == "email_otp" %}Emailed code{% else %}Backup code{% endif %}
+    </label>
+    <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required>
+    <button type="submit">Verify</button>
+  </form>
+</section>
+{% endblock %}
