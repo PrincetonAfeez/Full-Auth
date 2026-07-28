@@ -1,0 +1,48 @@
+groups:
+  - name: full-auth-availability
+    rules:
+      # Uptime: readiness probe failing -> page on-call.
+      - alert: ReadinessDown
+        expr: probe_success == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "Full Auth /readyz failing"
+          description: "The readiness probe has failed for 2 minutes. See runbooks/incident-response.md."
+
+      # SLO burn: availability below 99.9% over a rolling window (probe-based proxy).
+      - alert: AvailabilitySLOBurn
+        expr: avg_over_time(probe_success[1h]) < 0.999
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: "Availability SLO burning"
+          description: "Rolling 1h availability < 99.9%."
+
+  - name: full-auth-queue
+    rules:
+      - alert: OutboxDeadLetter
+        expr: fa_outbox_dead_letter > 0
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "Outbox dead-letter events present"
+          description: "Email delivery is failing; inspect with `manage.py outbox_stats`."
+
+      - alert: OutboxBacklogStalled
+        expr: fa_outbox_oldest_pending_seconds > 900
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "Outbox worker behind"
+          description: "Oldest undelivered event > 15m; check the worker."
+
+  - name: full-auth-security
+    rules:
+      - alert: OpenRiskEventSpike
+        expr: increase(fa_open_risk_events[15m]) > 20
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "Spike in open security risk events"
+          description: "Review the security console at /console/risk/."
