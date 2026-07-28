@@ -1,0 +1,31 @@
+# Production overlay — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+# Never deploy docker-compose.yml alone to staging/production.
+# Create .env.production from .env.production.example (gitignored) with real secrets.
+
+services:
+  web:
+    env_file:
+      - .env.production
+    environment:
+      FULL_AUTH_ENV: production
+      DJANGO_DEBUG: "false"
+      DJANGO_SECURE_COOKIES: "true"
+      DJANGO_TRUST_PROXY_SSL_HEADER: "true"
+    ports: []
+
+  worker:
+    env_file:
+      - .env.production
+    environment:
+      FULL_AUTH_ENV: production
+      DJANGO_DEBUG: "false"
+
+  postgres:
+    ports: []
+
+  redis:
+    ports: []
+
+  backup:
+    profiles: ["local-backup"]
