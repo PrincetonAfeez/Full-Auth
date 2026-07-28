@@ -35,7 +35,7 @@ jobs:
       ALERT_WEBHOOK_TOKEN: ci-alert-token
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
       - run: pip install -r requirements.lock -r requirements-dev.txt ruff pip-audit bandit
