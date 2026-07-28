@@ -1,0 +1,25 @@
+# Runnable monitoring stack. Bring up alongside the app:
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up
+# Prometheus scrapes /metrics and probes /readyz via blackbox; Alertmanager routes pages.
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on: [web]
+
+  blackbox:
+    image: prom/blackbox-exporter:latest
+    volumes:
+      - ./observability/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command: ["--config.file=/etc/blackbox_exporter/config.yml"]
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
