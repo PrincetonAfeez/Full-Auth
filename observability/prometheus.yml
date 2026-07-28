@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  # App metrics (/metrics is bearer-token guarded; set the token here in prod).
+  - job_name: full-auth
+    metrics_path: /metrics
+    scheme: http
+    # authorization:
+    #   type: Bearer
+    #   credentials: ${METRICS_TOKEN}  # set in production; required by fail-fast validation
+    static_configs:
+      - targets: ["web:8000"]
+
+  # Blackbox uptime probe of the readiness endpoint (this is the "pages a human" signal).
+  - job_name: readiness-probe
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ["http://web:8000/readyz"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
