@@ -28,7 +28,7 @@ jobs:
           nohup python manage.py runserver 127.0.0.1:8000 >server.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/readyz && break; sleep 1; done
       - name: ZAP baseline scan
-        uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: "http://127.0.0.1:8000/login/"
           # Baseline is a passive scan; report is uploaded as an artifact (dynamic-scan evidence).
