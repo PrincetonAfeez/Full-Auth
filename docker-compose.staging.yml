@@ -1,0 +1,21 @@
+# Staging override: same image as production, production-like settings, separate secrets.
+# Usage:  docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build
+# Create .env.staging from .env.production.example with staging-specific values.
+
+services:
+  web:
+    env_file:
+      - .env.staging
+    environment:
+      FULL_AUTH_ENV: staging
+      DJANGO_DEBUG: "false"
+      DJANGO_SECURE_COOKIES: "true"
+      DJANGO_TRUST_PROXY_SSL_HEADER: "true"
+  worker:
+    env_file:
+      - .env.staging
+    environment:
+      FULL_AUTH_ENV: staging
+      DJANGO_DEBUG: "false"
+  backup:
+    profiles: ["local-backup"]
