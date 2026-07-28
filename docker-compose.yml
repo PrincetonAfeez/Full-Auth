@@ -1,0 +1,88 @@
+# Local development only. For staging/production use docker-compose.prod.yml overlay.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fullauth
+      POSTGRES_USER: fullauth
+      POSTGRES_PASSWORD: fullauth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fullauth -d fullauth"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      FULL_AUTH_ENV: development
+      DJANGO_DEBUG: "true"
+      # No committed key: in dev the TOTP Fernet key is derived from DJANGO_SECRET_KEY.
+      # In production set a real TOTP_ENCRYPTION_KEY from your secret manager (fail-fast enforced).
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    # SIGTERM-aware worker: drains the current batch before exiting on deploy/stop.
+    command: python manage.py run_worker --interval 5 --limit 50
+    stop_grace_period: 30s
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      FULL_AUTH_ENV: development
+      DJANGO_DEBUG: "true"
+      # No committed key: in dev the TOTP Fernet key is derived from DJANGO_SECRET_KEY.
+      # In production set a real TOTP_ENCRYPTION_KEY from your secret manager (fail-fast enforced).
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Daily database backup (local dev only — enable with: --profile local-backup).
+  backup:
+    profiles: ["local-backup"]
+    image: postgres:16
+    entrypoint: >
+      sh -c "while true; do
+               DATABASE_URL=postgresql://fullauth:fullauth@postgres:5432/fullauth BACKUP_DIR=/backups
+               pg_dump --dbname=$$DATABASE_URL --format=custom --file=/backups/fullauth-$$(date -u +%Y%m%dT%H%M%SZ).dump
+               && echo backup-ok;
+               find /backups -name 'fullauth-*.dump' -mtime +30 -delete 2>/dev/null || true;
+               sleep 86400;
+             done"
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  backups:
+  postgres_data:
