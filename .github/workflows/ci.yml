@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fullauth
+          POSTGRES_USER: fullauth
+          POSTGRES_PASSWORD: fullauth
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fullauth -d fullauth"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://fullauth:fullauth@localhost:5432/fullauth
+      REDIS_URL: redis://localhost:6379/0
+      DJANGO_SECRET_KEY: ci-only-not-secret
+      TOTP_ENCRYPTION_KEY: EGkX15qpFCtW1xv_ynDptDKeW2MWfB6s5wei3M70rvc=
+      PUBLIC_BASE_URL: http://localhost:8000
+      METRICS_TOKEN: ci-metrics-token
+      ALERT_WEBHOOK_TOKEN: ci-alert-token
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements.lock -r requirements-dev.txt ruff pip-audit bandit
+      - name: Lint
+        run: ruff check .
+      - name: Security static analysis (SAST)
+        run: bandit -r . -x ./staticfiles,./sso/tests.py -ll
+      - name: Migration check
+        run: python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: python -m pytest -q
+      - name: Backup restore drill
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          BACKUP_DIR=/tmp/backups DATABASE_URL=$DATABASE_URL ./scripts/backup.sh
+          DUMP=$(ls /tmp/backups/fullauth-*.dump | tail -1)
+          PGPASSWORD=fullauth psql -h localhost -U fullauth -d postgres -c "DROP DATABASE IF EXISTS fullauth_restore_drill;"
+          PGPASSWORD=fullauth psql -h localhost -U fullauth -d postgres -c "CREATE DATABASE fullauth_restore_drill;"
+          DATABASE_URL=postgresql://fullauth:fullauth@localhost:5432/fullauth_restore_drill ./scripts/restore.sh "$DUMP"
+          PGPASSWORD=fullauth psql -h localhost -U fullauth -d postgres -c "DROP DATABASE fullauth_restore_drill;"
+      - name: Smoke checks
+        run: |
+          python manage.py migrate --noinput
+          python manage.py runserver 127.0.0.1:8000 &
+          sleep 5
+          python manage.py smoke_staging --base-url http://127.0.0.1:8000
+      - name: Dependency audit
+        run: pip-audit -r requirements.lock
+      - name: Docker build
+        run: docker build -t full-auth .

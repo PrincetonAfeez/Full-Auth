@@ -1,0 +1,47 @@
+name: Security Scans
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly baseline
+
+jobs:
+  dast:
+    name: OWASP ZAP baseline (DAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.lock
+      - name: Start the app (SQLite dev target)
+        env:
+          FULL_AUTH_ENV: development
+          DJANGO_DEBUG: "false"
+          DJANGO_SECRET_KEY: dast-only
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+        run: |
+          python manage.py migrate --noinput
+          python manage.py collectstatic --noinput
+          nohup python manage.py runserver 127.0.0.1:8000 >server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/readyz && break; sleep 1; done
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "http://127.0.0.1:8000/login/"
+          # Baseline is a passive scan; report is uploaded as an artifact (dynamic-scan evidence).
+          cmd_options: "-a -I"
+        continue-on-error: true
+
+  sast:
+    name: Bandit (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install bandit
+      - run: bandit -r . -x ./staticfiles,./sso/tests.py -ll
