@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: Full Auth API
+  version: "1.0"
+  description: >
+    Session-authenticated (cookie + CSRF) JSON API. Non-browser clients GET /api/v1/auth/status/
+    first to obtain the CSRF cookie, then send its value in the X-CSRFToken header on writes.
+    All errors use the envelope in components/schemas/Error. A global per-principal rate limit
+    applies to /api/ (429 on exceed).
+servers:
+  - url: /api/v1
+tags: [auth, me, mfa, trusted-devices, organizations, admin, notifications]
+paths:
+  /auth/status/:
+    get: { tags: [auth], summary: Auth state + sets CSRF cookie, responses: { "200": { description: OK } } }
+  /auth/login/:
+    post:
+      tags: [auth]
+      summary: Password step (may enter awaiting-2FA)
+      requestBody: { $ref: "#/components/requestBodies/Login" }
+      responses:
+        "200": { description: Authenticated }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { description: Email verification required, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { $ref: "#/components/responses/Error" }
+  /auth/2fa/verify/:
+    post: { tags: [auth], summary: Complete a second factor, responses: { "200": { description: OK }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } }
+  /auth/logout/:
+    post: { tags: [auth], summary: Log out, responses: { "200": { description: OK } } }
+  /auth/password-reset/request/:
+    post: { tags: [auth], summary: Request reset (enumeration-safe), responses: { "200": { description: OK }, "429": { $ref: "#/components/responses/Error" } } }
+  /auth/password-reset/complete/:
+    post: { tags: [auth], summary: Complete reset, responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" }, "409": { $ref: "#/components/responses/Error" } } }
+  /auth/email-verification/request/:
+    post: { tags: [auth], summary: Resend verification link, responses: { "200": { description: OK }, "429": { $ref: "#/components/responses/Error" } } }
+  /auth/email-verification/complete/:
+    post: { tags: [auth], summary: Verify email by token, responses: { "200": { description: OK }, "409": { $ref: "#/components/responses/Error" } } }
+  /me/:
+    get: { tags: [me], summary: Current user, security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "401": { $ref: "#/components/responses/Error" } } }
+  /me/security/:
+    get: { tags: [me], summary: Enrolled factors, security: [{ sessionAuth: [] }], responses: { "200": { description: OK } } }
+  /me/sessions/:
+    get:
+      tags: [me]
+      summary: List active sessions (paginated)
+      parameters: [{ $ref: "#/components/parameters/PageLimit" }, { $ref: "#/components/parameters/PageOffset" }]
+      security: [{ sessionAuth: [] }]
+      responses: { "200": { description: OK }, "401": { $ref: "#/components/responses/Error" } }
+  /me/sessions/{id}/revoke/:
+    post: { tags: [me], summary: Revoke a session (recent-auth), parameters: [{ $ref: "#/components/parameters/IntId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" }, "404": { $ref: "#/components/responses/Error" } } }
+  /me/backup-codes/regenerate/:
+    post: { tags: [mfa], summary: Regenerate backup codes (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/2fa/totp/enable/:
+    post: { tags: [mfa], summary: Begin TOTP enrollment (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: device_id + secret }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/2fa/totp/confirm/:
+    post: { tags: [mfa], summary: Confirm TOTP + mint backup codes (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/2fa/email/enable/:
+    post: { tags: [mfa], summary: Enable email OTP (verified email required), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" } } }
+  /me/2fa/{id}/disable/:
+    post: { tags: [mfa], summary: Disable a factor (recent-auth; keeps a strong factor), parameters: [{ $ref: "#/components/parameters/IntId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "409": { $ref: "#/components/responses/Error" } } }
+  /me/2fa/webauthn/register/options/:
+    post: { tags: [mfa], summary: WebAuthn registration options (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/2fa/webauthn/register/verify/:
+    post: { tags: [mfa], summary: WebAuthn registration verify (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /auth/2fa/webauthn/options/:
+    post: { tags: [mfa], summary: WebAuthn assertion options, responses: { "200": { description: OK } } }
+  /auth/2fa/webauthn/verify/:
+    post: { tags: [mfa], summary: WebAuthn assertion verify, responses: { "200": { description: OK }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } }
+  /auth/2fa/webauthn/register/options/:
+    post: { tags: [mfa], summary: Passkey enrollment during forced MFA (enrollment-only), responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /auth/2fa/webauthn/register/verify/:
+    post: { tags: [mfa], summary: Complete passkey enrollment during forced MFA, responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/step-up/begin/:
+    post: { tags: [mfa], summary: Begin step-up (returns bound token), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" } } }
+  /me/step-up/verify/:
+    post: { tags: [mfa], summary: Step-up verify (password/TOTP/backup), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" }, "429": { $ref: "#/components/responses/Error" } } }
+  /me/step-up/webauthn/options/:
+    post: { tags: [mfa], summary: Passkey step-up options (requires bound challenge), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/step-up/webauthn/verify/:
+    post: { tags: [mfa], summary: Passkey step-up verify (bound action + token), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" }, "429": { $ref: "#/components/responses/Error" } } }
+  /me/trusted-devices/:
+    get:
+      tags: [trusted-devices]
+      summary: List trusted devices (paginated)
+      parameters: [{ $ref: "#/components/parameters/PageLimit" }, { $ref: "#/components/parameters/PageOffset" }]
+      security: [{ sessionAuth: [] }]
+      responses: { "200": { description: OK } }
+  /me/trusted-devices/trust/:
+    post: { tags: [trusted-devices], summary: Trust current device (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/trusted-devices/{id}/revoke/:
+    post: { tags: [trusted-devices], summary: Revoke a trusted device (recent-auth), parameters: [{ $ref: "#/components/parameters/IntId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" }, "404": { $ref: "#/components/responses/Error" } } }
+  /me/export/:
+    get: { tags: [me], summary: Export my data (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/password/change/:
+    post: { tags: [me], summary: Change password (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/email/change/:
+    post: { tags: [me], summary: Begin email change (recent-auth), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "409": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } }
+  /me/notification-preferences/:
+    get: { tags: [notifications], summary: Get preferences, security: [{ sessionAuth: [] }], responses: { "200": { description: OK } } }
+  /me/notification-preferences/set/:
+    post: { tags: [notifications], summary: Set a suppressible category, security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" } } }
+  /organizations/{slug}/members/:
+    get:
+      tags: [organizations]
+      summary: Roster (STAFF+; 404 non-member; 403 suspended; paginated)
+      parameters:
+        - { $ref: "#/components/parameters/Slug" }
+        - { $ref: "#/components/parameters/PageLimit" }
+        - { $ref: "#/components/parameters/PageOffset" }
+      security: [{ sessionAuth: [] }]
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" }, "404": { $ref: "#/components/responses/Error" } }
+  /organizations/{slug}/invitations/:
+    post: { tags: [organizations], summary: Invite a user (admin, recent-auth), parameters: [{ $ref: "#/components/parameters/Slug" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /organizations/invitations/accept/:
+    post: { tags: [organizations], summary: Accept an invitation, security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /organizations/{slug}/members/{user_id}/role/:
+    post: { tags: [organizations], summary: Change member role (admin, recent-auth), parameters: [{ $ref: "#/components/parameters/Slug" }, { $ref: "#/components/parameters/UserId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /organizations/{slug}/members/{user_id}/remove/:
+    post: { tags: [organizations], summary: Remove member (admin, recent-auth, rank-checked), parameters: [{ $ref: "#/components/parameters/Slug" }, { $ref: "#/components/parameters/UserId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" }, "404": { $ref: "#/components/responses/Error" } } }
+  /organizations/{slug}/policy/:
+    post: { tags: [organizations], summary: Update org security policy (admin, recent-auth), parameters: [{ $ref: "#/components/parameters/Slug" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "400": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/users/:
+    get:
+      tags: [admin]
+      summary: List users (superuser; paginated)
+      parameters: [{ $ref: "#/components/parameters/PageLimit" }, { $ref: "#/components/parameters/PageOffset" }]
+      security: [{ sessionAuth: [] }]
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } }
+  /admin/audit-events/:
+    get: { tags: [admin], summary: Audit events (superuser; paginated/filterable), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/security-events/:
+    get: { tags: [admin], summary: Risk events (superuser; paginated), security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/organizations/{slug}/suspend/:
+    post: { tags: [admin], summary: Suspend/reactivate org (superuser, recent-auth), parameters: [{ $ref: "#/components/parameters/Slug" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/organizations/{slug}/close/:
+    post: { tags: [admin], summary: Close org (superuser, recent-auth), parameters: [{ $ref: "#/components/parameters/Slug" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/users/{user_id}/deactivate/:
+    post: { tags: [admin], summary: Deactivate a user (rank-checked, recent-auth), parameters: [{ $ref: "#/components/parameters/UserId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/users/{user_id}/erase/:
+    post: { tags: [admin], summary: Erase a user (superuser/self, recent-auth), parameters: [{ $ref: "#/components/parameters/UserId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/users/{user_id}/sessions/revoke/:
+    post: { tags: [admin], summary: Revoke a user's sessions (rank-checked), parameters: [{ $ref: "#/components/parameters/UserId" }], security: [{ sessionAuth: [] }], responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } } }
+  /admin/users/{user_id}/roles/assign/:
+    post:
+      tags: [admin]
+      summary: Assign a Django group role (superuser, recent-auth)
+      parameters: [{ $ref: "#/components/parameters/UserId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [group]
+              properties:
+                group: { type: string }
+                organization: { type: string, description: "Org slug for org-scoped assignment" }
+      security: [{ sessionAuth: [] }]
+      responses: { "200": { description: OK }, "403": { $ref: "#/components/responses/Error" } }
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+  parameters:
+    IntId: { name: id, in: path, required: true, schema: { type: integer } }
+    UserId: { name: user_id, in: path, required: true, schema: { type: integer } }
+    Slug: { name: slug, in: path, required: true, schema: { type: string } }
+    PageLimit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+    PageOffset: { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+  requestBodies:
+    Login:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [username, password]
+            properties:
+              username: { type: string }
+              password: { type: string, format: password }
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: awaiting_2fa }
+            message: { type: string }
+            fields: { type: object }
+            request_id: { type: string }
