@@ -1,0 +1,13 @@
+# Locked, tested dependency set (exact versions the 115-test suite is validated against on
+# Python 3.14 + Django 6.0). Deploy with:  pip install -r requirements.lock
+# Regenerate after changing requirements.txt and re-running the suite.
+Django==6.0.7
+argon2-cffi==25.1.0
+cryptography==49.0.0
+psycopg[binary]==3.2.13
+gunicorn==23.0.0
+whitenoise==6.12.0
+redis==6.4.0
+qrcode[pil]==8.2
+webauthn==3.0.0
+PyJWT[crypto]==2.10.1
